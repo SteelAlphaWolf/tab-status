@@ -1,0 +1,5 @@
+{
+  "name": "tab-status",
+  "owner": { "name": "Oliver Wolf" },
+  "plugins": [{ "name": "tab-status", "source": "./", "description": "Windows Terminal tab icons for Claude Code: waiting on you, running, background job, error, stale cache with time, about to go stale, chat nearly full." }]
+}
