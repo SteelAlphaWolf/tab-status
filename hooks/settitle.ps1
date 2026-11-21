@@ -4,7 +4,8 @@
 #   -Icon   status icon, hex code point
 #   -Extra  short ASCII text after the icon ("1h05m", "8m"), optional
 #   -Full   context-window percent; when set, adds a brick + "NN%" (chat nearly full), optional
-param([int]$TargetPid, [string]$Icon, [string]$Extra = "", [string]$Full = "")
+#   -Name   the chat name to show, base64 UTF-8 (from the session title); absent, kept from the current title
+param([int]$TargetPid, [string]$Icon, [string]$Extra = "", [string]$Full = "", [string]$Name = "")
 
 Add-Type -Namespace TabStatus -Name Con -MemberDefinition @'
 [DllImport("kernel32.dll")] public static extern bool FreeConsole();
@@ -27,7 +28,8 @@ do {
   $name = $name -replace '^[^\p{L}\p{N}]+', ''
   $name = $name -replace '^(\d+h\d{2}m|\d+m|\d+%)(?=\s|$)', ''
 } while ($name -ne $before)
-if (-not $name) { $name = "Claude Code" }
+if ($Name) { $name = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Name)) }
+if (-not $name -or $name -match '^(claude|claude code)$') { $name = "Claude Code" }
 
 function Get-Glyph([string]$hex) { [char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)) }
 

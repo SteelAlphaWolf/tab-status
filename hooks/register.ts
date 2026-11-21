@@ -14,6 +14,12 @@ const FIVE_MIN = 300_000
 const TICK = 60_000 // idle refresh
 const WAIT_TICK = 3_000 // while waiting on you, re-assert over Claude's spinner
 const FULL_AT = 80 // context % from which the brick shows
+const RENAME_EVERY = 5 // replies between tab-name checks
+
+const NAME_ASK = [
+  'Name this chat for a terminal tab, judging by what it is about NOW (the latest messages weigh most).',
+  'Answer with the name only: 2 to 4 plain words, Title Case, no quotes, no emoji, no punctuation at the end, under 32 characters.',
+].join(' ')
 
 type Timer = { cancel: () => void }
 
@@ -28,12 +34,26 @@ const st: {
   waitTicker?: Timer
   pid?: string
   script?: string
+  name?: string // the session title, once Claude Code has one
+  aiName?: string // the name the mod picked from the latest content; wins over `name`
+  replies: number
+  naming: boolean
 } = {
   lastRequestAt: 0,
   ttlMs: HOUR, // corrected from each response's cache write
   running: false,
   failed: false,
   backgroundCount: 0,
+  replies: 0,
+  naming: false,
+}
+
+/** Base64 of a UTF-8 string, so the chat name crosses the command line intact. */
+function b64(text: string): string {
+  const bytes = new TextEncoder().encode(text)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin)
 }
 
 function stamp(ms: number): string {
@@ -58,7 +78,7 @@ async function setTab($: EngineInterface, icon: string, extra: string): Promise<
   try {
     await $.process.run(
       ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-        '-File', st.script, '-TargetPid', st.pid, '-Icon', icon, '-Extra', extra, '-Full', full],
+        '-File', st.script, '-TargetPid', st.pid, '-Icon', icon, '-Extra', extra, '-Full', full, '-Name', (st.aiName ?? st.name) ? b64(st.aiName ?? st.name ?? '') : ''],
       { timeoutMs: 15_000 },
     )
   } catch (err) {
@@ -78,6 +98,27 @@ async function refresh($: EngineInterface): Promise<void> {
   if (left <= 0) return setTab($, STALE, stamp(-left))
   if (left <= soonAt) return setTab($, SOON, `${Math.ceil(left / 60_000)}m`)
   return setTab($, WARM, '')
+}
+
+/** Asks the model (over this chat's own cached transcript) for a fresh tab name. */
+async function rename($: EngineInterface): Promise<void> {
+  if (st.naming) return
+  st.naming = true
+  try {
+    const sentAt = await $.clock.now()
+    const reply = await $.model.fork({ prompt: NAME_ASK })
+    if (!reply.isAnswered) return
+    st.lastRequestAt = Math.max(st.lastRequestAt, sentAt) // reading the chat renews its cache
+    const clean = (reply.text.trim().split(/\r?\n/)[0] ?? '').replace(/["'`*_#.]+/g, '').replace(/[^\p{L}\p{N} &+\-]/gu, '').trim().slice(0, 32)
+    if (clean) {
+      st.aiName = clean
+      await refresh($)
+    }
+  } catch (err) {
+    $.ui.log(`tab-status: rename failed: ${String(err)}`, { to: 'debug' })
+  } finally {
+    st.naming = false
+  }
 }
 
 function startIdleTicker($: EngineInterface, firstInMs: number): void {
@@ -162,14 +203,32 @@ export const register: Register = on => {
       st.running = false
       st.failed = e.reason !== 'answer'
       stopWaiting($)
+      if (e.reason === 'answer') {
+        st.replies++
+        if (st.replies % RENAME_EVERY === 0) void rename($)
+      }
       // Let Claude write its own idle title first, then put our icon in front.
       startIdleTicker($, 1500)
     }
     return r
   })
 
+  // The chat name: Claude Code's session title, handed to its classic hooks.
+  on('classic.SessionStart', async ($, e, next) => {
+    if (e.session_title) st.name = e.session_title
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.UserPromptSubmit', async ($, e, next) => {
+    if (e.session_title) st.name = e.session_title
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
   on('session.start', async ($, e, next) => {
     const r = await next(e)
+    // Stop Claude Code drawing its own tab title (the spinning circle), so ours shows.
+    const set = await $.env.set('CLAUDE_CODE_DISABLE_TERMINAL_TITLE', '1')
+    if (set.deny) $.ui.log(`tab-status: could not switch off Claude's title: ${set.deny}`, { to: 'debug' })
     startIdleTicker($, 2000)
     return r
   })
