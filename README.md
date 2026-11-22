@@ -2,7 +2,7 @@
 
 A Claude Code mod that puts a status icon on your Windows Terminal tab, so with several Claude tabs open you can see at a glance which one needs you, which is working, and which would cost tokens to pick back up.
 
-After every 5 replies the mod also gives the tab a fresh 2-4 word name based on what the chat is about now (one short question over the chat's own cached history, so it costs little). Until then it uses Claude's chat title.
+After the first reply, and then every 5 replies, the mod gives the tab a fresh 2-4 word name based on what the chat is about now (one short question over the chat's own cached history, so it costs little). Until then it shows "Claude Code" (or your chat title if you renamed the chat), never the shell's default "Windows PowerShell".
 
 | Icon | Meaning |
 | --- | --- |

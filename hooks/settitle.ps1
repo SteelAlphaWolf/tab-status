@@ -29,7 +29,9 @@ do {
   $name = $name -replace '^(\d+h\d{2}m|\d+m|\d+%)(?=\s|$)', ''
 } while ($name -ne $before)
 if ($Name) { $name = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Name)) }
-if (-not $name -or $name -match '^(claude|claude code)$') { $name = "Claude Code" }
+# The shell's own default title is not a chat name ("Windows PowerShell", "Administrator: PowerShell", "C:\...\cmd.exe").
+$shellTitle = '^(administrator:\s*)?(windows powershell|powershell|pwsh|command prompt|cmd|claude|claude code|.*\.exe)$'
+if (-not $name -or $name -match $shellTitle) { $name = "Claude Code" }
 
 function Get-Glyph([string]$hex) { [char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)) }
 

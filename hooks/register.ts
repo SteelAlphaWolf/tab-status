@@ -205,7 +205,8 @@ export const register: Register = on => {
       stopWaiting($)
       if (e.reason === 'answer') {
         st.replies++
-        if (st.replies % RENAME_EVERY === 0) void rename($)
+        // Name the tab after the first reply (also the first after a resume or reload), then every 5.
+        if (st.replies === 1 || st.replies % RENAME_EVERY === 0) void rename($)
       }
       // Let Claude write its own idle title first, then put our icon in front.
       startIdleTicker($, 1500)
