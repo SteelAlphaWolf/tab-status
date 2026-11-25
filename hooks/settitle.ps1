@@ -22,23 +22,23 @@ $sb = New-Object System.Text.StringBuilder 1024
 $current = $sb.ToString()
 
 # Strip leading icons / spinner glyphs and our own stamps ("1h05m", "8m", "85%"), keep the chat name.
-$name = $current
+$chatName = $current
 do {
-  $before = $name
-  $name = $name -replace '^[^\p{L}\p{N}]+', ''
-  $name = $name -replace '^(\d+h\d{2}m|\d+m|\d+%)(?=\s|$)', ''
-} while ($name -ne $before)
-if ($Name) { $name = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Name)) }
+  $before = $chatName
+  $chatName = $chatName -replace '^[^\p{L}\p{N}]+', ''
+  $chatName = $chatName -replace '^(\d+h\d{2}m|\d+m|\d+%)(?=\s|$)', ''
+} while ($chatName -ne $before)
+if ($Name) { $chatName = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Name)) }
 # The shell's own default title is not a chat name ("Windows PowerShell", "Administrator: PowerShell", "C:\...\cmd.exe").
 $shellTitle = '^(administrator:\s*)?(windows powershell|powershell|pwsh|command prompt|cmd|claude|claude code|.*\.exe)$'
-if (-not $name -or $name -match $shellTitle) { $name = "Claude Code" }
+if (-not $chatName -or $chatName -match $shellTitle) { $chatName = "Claude Code" }
 
 function Get-Glyph([string]$hex) { [char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)) }
 
 $parts = @(Get-Glyph $Icon)
 if ($Extra) { $parts += $Extra }
 if ($Full) { $parts += ((Get-Glyph '1F9F1') + $Full + '%') }
-$parts += $name
+$parts += $chatName
 $title = $parts -join ' '
 
 if ($title -ne $current) { [TabStatus.Con]::SetConsoleTitleW($title) | Out-Null }

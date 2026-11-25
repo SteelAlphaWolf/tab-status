@@ -107,7 +107,11 @@ async function rename($: EngineInterface): Promise<void> {
   try {
     const sentAt = await $.clock.now()
     const reply = await $.model.fork({ prompt: NAME_ASK })
-    if (!reply.isAnswered) return
+    if (!reply.isAnswered) {
+      $.ui.log(`tab-status: rename got no answer: ${JSON.stringify(reply).slice(0, 300)}`, { to: 'debug' })
+      return
+    }
+    $.ui.log(`tab-status: rename answer: ${reply.text.slice(0, 80)}`, { to: 'debug' })
     st.lastRequestAt = Math.max(st.lastRequestAt, sentAt) // reading the chat renews its cache
     const clean = (reply.text.trim().split(/\r?\n/)[0] ?? '').replace(/["'`*_#.]+/g, '').replace(/[^\p{L}\p{N} &+\-]/gu, '').trim().slice(0, 32)
     if (clean) {

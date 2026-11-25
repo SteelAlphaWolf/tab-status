@@ -1,1 +1,1 @@
-{"name": "tab-status", "version": "0.4.1", "license": "MIT", "description": "Terminal tab status icons (waiting on you, running, background job, error, stale cache with time, about to go stale, chat nearly full) plus a smart tab name set after the first reply and refreshed every 5"}
+{"name": "tab-status", "version": "0.4.2", "license": "MIT", "description": "Terminal tab status icons (waiting on you, running, background job, error, stale cache with time, about to go stale, chat nearly full) plus a smart tab name set after the first reply and refreshed every 5"}
